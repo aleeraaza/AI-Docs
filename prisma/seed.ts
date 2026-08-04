@@ -81,6 +81,12 @@ async function main() {
     });
   }
 
+  // Remove leftover accounts from older seeds (e.g. @ajaia.dev) so share lists stay clean
+  const demoEmails = users.map((u) => u.email);
+  await prisma.user.deleteMany({
+    where: { email: { notIn: demoEmails } },
+  });
+
   const ali = await prisma.user.findUniqueOrThrow({
     where: { email: "ali@alidocs.dev" },
   });

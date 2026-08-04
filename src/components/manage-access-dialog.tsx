@@ -12,6 +12,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type ShareRow = {
   id: string;
@@ -45,7 +52,7 @@ export function ManageAccessDialog({
   onChanged,
 }: Props) {
   const [directory, setDirectory] = useState<DirectoryUser[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [permission, setPermission] = useState<"edit" | "view">("edit");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -56,10 +63,32 @@ export function ManageAccessDialog({
     [shares],
   );
 
-  // People who can still be added (not already on the document)
+  // Other real users only — never the owner, never already-shared people
   const availableUsers = useMemo(
-    () => directory.filter((u) => !sharedIds.has(u.id)),
-    [directory, sharedIds],
+    () =>
+      directory.filter(
+        (u) =>
+          u.email.toLowerCase() !== owner.email.toLowerCase() &&
+          !sharedIds.has(u.id),
+      ),
+    [directory, owner.email, sharedIds],
+  );
+
+  const personItems = useMemo(
+    () =>
+      availableUsers.map((person) => ({
+        value: person.id,
+        label: `${person.name} (${person.email})`,
+      })),
+    [availableUsers],
+  );
+
+  const roleItems = useMemo(
+    () => [
+      { value: "edit", label: "Writer" },
+      { value: "view", label: "Reader" },
+    ],
+    [],
   );
 
   useEffect(() => {
@@ -67,7 +96,7 @@ export function ManageAccessDialog({
 
     let cancelled = false;
     setError(null);
-    setSelectedUserId("");
+    setSelectedUserId(null);
     setPermission("edit");
     setLoadingUsers(true);
 
@@ -98,13 +127,12 @@ export function ManageAccessDialog({
     };
   }, [open]);
 
-  // Keep selection valid when the available list changes after a share
   useEffect(() => {
     if (
       selectedUserId &&
       !availableUsers.some((u) => u.id === selectedUserId)
     ) {
-      setSelectedUserId("");
+      setSelectedUserId(null);
     }
   }, [availableUsers, selectedUserId]);
 
@@ -130,7 +158,7 @@ export function ManageAccessDialog({
         setError(data.error || "Could not share document");
         return;
       }
-      setSelectedUserId("");
+      setSelectedUserId(null);
       await onChanged();
     } catch {
       setError("Network error while sharing.");
@@ -153,6 +181,12 @@ export function ManageAccessDialog({
     await onChanged();
   }
 
+  const personPlaceholder = loadingUsers
+    ? "Loading people…"
+    : availableUsers.length === 0
+      ? "Everyone available already has access"
+      : "Select a person";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 p-0 sm:max-w-lg">
@@ -169,41 +203,53 @@ export function ManageAccessDialog({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="min-w-0 flex-1 space-y-1.5">
               <Label htmlFor="share-person">Add people</Label>
-              <select
-                id="share-person"
-                required
+              <Select
                 value={selectedUserId}
+                onValueChange={(value) => setSelectedUserId(value)}
+                items={personItems}
                 disabled={loadingUsers || availableUsers.length === 0}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <option value="">
-                  {loadingUsers
-                    ? "Loading people…"
-                    : availableUsers.length === 0
-                      ? "Everyone available already has access"
-                      : "Select a person"}
-                </option>
-                {availableUsers.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {person.name} ({person.email})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  id="share-person"
+                  className="h-10 w-full min-w-0"
+                >
+                  <SelectValue placeholder={personPlaceholder} />
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false} align="start">
+                  {availableUsers.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      <span className="flex min-w-0 flex-col gap-0.5 py-0.5">
+                        <span className="truncate font-medium">
+                          {person.name}
+                        </span>
+                        <span className="truncate text-xs text-muted-foreground">
+                          {person.email}
+                        </span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="w-full space-y-1.5 sm:w-40">
               <Label htmlFor="share-role">Role</Label>
-              <select
-                id="share-role"
+              <Select
                 value={permission}
-                onChange={(e) =>
-                  setPermission(e.target.value as "edit" | "view")
-                }
-                className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                onValueChange={(value) => {
+                  if (value === "edit" || value === "view") {
+                    setPermission(value);
+                  }
+                }}
+                items={roleItems}
               >
-                <option value="edit">Writer</option>
-                <option value="view">Reader</option>
-              </select>
+                <SelectTrigger id="share-role" className="h-10 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  <SelectItem value="edit">Writer</SelectItem>
+                  <SelectItem value="view">Reader</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -223,7 +269,12 @@ export function ManageAccessDialog({
             </Button>
             <Button
               type="submit"
-              disabled={loading || loadingUsers || availableUsers.length === 0}
+              disabled={
+                loading ||
+                loadingUsers ||
+                availableUsers.length === 0 ||
+                !selectedUserId
+              }
               className="gap-2"
             >
               {loading ? (

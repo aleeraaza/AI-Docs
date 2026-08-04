@@ -16,8 +16,7 @@ const serif = Literata({
 
 export const metadata: Metadata = {
   title: "Ali Docs - AI",
-  description:
-    "Ali Docs — collaborative documents by Ali Raza. Create, edit, share, and import files.",
+  description: "Collaborative documents by Ali Raza. Create, edit, share, and import files.",
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
     shortcut: "/favicon.svg",
