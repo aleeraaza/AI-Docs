@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Loader2, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,13 +11,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export type ShareRow = {
   id: string;
   permission: string;
   user: { id: string; name: string; email: string };
+};
+
+type DirectoryUser = {
+  id: string;
+  name: string;
+  email: string;
 };
 
 type Props = {
@@ -39,27 +44,93 @@ export function ManageAccessDialog({
   owner,
   onChanged,
 }: Props) {
-  const [email, setEmail] = useState("");
+  const [directory, setDirectory] = useState<DirectoryUser[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [permission, setPermission] = useState<"edit" | "view">("edit");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const sharedIds = useMemo(
+    () => new Set(shares.map((share) => share.user.id)),
+    [shares],
+  );
+
+  // People who can still be added (not already on the document)
+  const availableUsers = useMemo(
+    () => directory.filter((u) => !sharedIds.has(u.id)),
+    [directory, sharedIds],
+  );
+
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+    setError(null);
+    setSelectedUserId("");
+    setPermission("edit");
+    setLoadingUsers(true);
+
+    fetch("/api/users")
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Could not load people");
+        }
+        if (!cancelled) {
+          setDirectory(data.users ?? []);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Could not load people",
+          );
+          setDirectory([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingUsers(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  // Keep selection valid when the available list changes after a share
+  useEffect(() => {
+    if (
+      selectedUserId &&
+      !availableUsers.some((u) => u.id === selectedUserId)
+    ) {
+      setSelectedUserId("");
+    }
+  }, [availableUsers, selectedUserId]);
 
   async function handleShare(event: FormEvent) {
     event.preventDefault();
     setError(null);
+
+    const selected = availableUsers.find((u) => u.id === selectedUserId);
+    if (!selected) {
+      setError("Choose someone from the list to share with.");
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await fetch(`/api/documents/${documentId}/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, permission }),
+        body: JSON.stringify({ email: selected.email, permission }),
       });
       const data = await response.json();
       if (!response.ok) {
         setError(data.error || "Could not share document");
         return;
       }
-      setEmail("");
+      setSelectedUserId("");
       await onChanged();
     } catch {
       setError("Network error while sharing.");
@@ -97,16 +168,28 @@ export function ManageAccessDialog({
         <form onSubmit={handleShare} className="space-y-3 px-6 py-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="min-w-0 flex-1 space-y-1.5">
-              <Label htmlFor="share-email">Add people</Label>
-              <Input
-                id="share-email"
-                type="email"
+              <Label htmlFor="share-person">Add people</Label>
+              <select
+                id="share-person"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="bob@alidocs.dev"
-                className="h-10"
-              />
+                value={selectedUserId}
+                disabled={loadingUsers || availableUsers.length === 0}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <option value="">
+                  {loadingUsers
+                    ? "Loading people…"
+                    : availableUsers.length === 0
+                      ? "Everyone available already has access"
+                      : "Select a person"}
+                </option>
+                {availableUsers.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.name} ({person.email})
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="w-full space-y-1.5 sm:w-40">
               <Label htmlFor="share-role">Role</Label>
@@ -138,7 +221,11 @@ export function ManageAccessDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="gap-2">
+            <Button
+              type="submit"
+              disabled={loading || loadingUsers || availableUsers.length === 0}
+              className="gap-2"
+            >
               {loading ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (

@@ -12,14 +12,15 @@ import {
   Share2,
   Trash2,
   Type,
+  Upload,
 } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
+import { DeleteDocumentDialog } from "@/components/delete-document-dialog";
 import {
   ManageAccessDialog,
   type ShareRow,
 } from "@/components/manage-access-dialog";
 import { RenameDialog } from "@/components/rename-dialog";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,9 +28,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatOpenedDate, stripHtml } from "@/lib/format";
+import { formatOpenedDate } from "@/lib/format";
 import { DOCUMENT_TEMPLATES } from "@/lib/templates";
 import { cn } from "@/lib/utils";
+import { Button } from "./ui/button";
 
 export type DocItem = {
   id: string;
@@ -67,6 +69,7 @@ export function DashboardClient({ user, owned, shared }: Props) {
   const [pending, startTransition] = useTransition();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [renameDoc, setRenameDoc] = useState<DocItem | null>(null);
+  const [deleteDoc, setDeleteDoc] = useState<DocItem | null>(null);
   const [shareDoc, setShareDoc] = useState<DocItem | null>(null);
   const [shareRows, setShareRows] = useState<ShareRow[]>([]);
 
@@ -147,14 +150,12 @@ export function DashboardClient({ user, owned, shared }: Props) {
   }
 
   async function deleteDocument(doc: DocItem) {
-    if (!confirm(`Move “${doc.title}” to trash?`)) return;
     const response = await fetch(`/api/documents/${doc.id}`, {
       method: "DELETE",
     });
     if (!response.ok) {
       const data = await response.json();
-      setError(data.error || "Delete failed");
-      return;
+      throw new Error(data.error || "Delete failed");
     }
     startTransition(() => router.refresh());
   }
@@ -191,14 +192,14 @@ export function DashboardClient({ user, owned, shared }: Props) {
             </h2>
             <div className="flex items-center gap-2">
               <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-9 gap-2 rounded-full border-docs-border bg-white px-4 text-docs-title shadow-sm hover:bg-white hover:shadow"
+                variant="default"
                 disabled={busy}
                 onClick={() => fileInputRef.current?.click()}
+                className="rounded-full px-4 py-4"
               >
-                <FileUp className="size-4 text-docs-blue" />
+              
+                  <Upload className="size-4" />
+                
                 Upload file
               </Button>
               <input
@@ -306,7 +307,7 @@ export function DashboardClient({ user, owned, shared }: Props) {
                   className="block h-[180px] overflow-hidden bg-[#f8f9fa] px-4 pt-4"
                 >
                   <p className="line-clamp-8 whitespace-pre-wrap text-[11px] leading-4 text-[#3c4043]">
-                    {stripHtml(doc.content || "") || "Empty document"}
+                    {doc.content?.trim() || "Empty document"}
                   </p>
                 </Link>
                 <div className="flex items-start gap-2 border-t border-docs-border px-3 py-2.5">
@@ -369,7 +370,7 @@ export function DashboardClient({ user, owned, shared }: Props) {
                           <DropdownMenuItem
                             variant="destructive"
                             className="gap-2"
-                            onClick={() => deleteDocument(doc)}
+                            onClick={() => setDeleteDoc(doc)}
                           >
                             <Trash2 className="size-4" />
                             Remove
@@ -397,6 +398,16 @@ export function DashboardClient({ user, owned, shared }: Props) {
         onRename={async (title) => {
           if (!renameDoc) return;
           await renameDocument(renameDoc.id, title);
+        }}
+      />
+
+      <DeleteDocumentDialog
+        open={!!deleteDoc}
+        onOpenChange={(open) => !open && setDeleteDoc(null)}
+        documentTitle={deleteDoc?.title ?? ""}
+        onConfirm={async () => {
+          if (!deleteDoc) return;
+          await deleteDocument(deleteDoc);
         }}
       />
 

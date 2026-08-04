@@ -222,10 +222,10 @@ export function DocumentEditor({ documentId, user }: Props) {
         <div className="mx-auto flex max-w-[1400px] items-center gap-2 px-3 py-1.5 sm:gap-3 sm:px-4">
           <Link
             href="/dashboard"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full text-docs-blue hover:bg-[#f1f3f4]"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-docs-blue-soft text-docs-blue transition hover:bg-[#d2e3fc]"
             title="Ali Docs home"
           >
-            <AliDocsLogo className="size-6" />
+            <AliDocsLogo className="size-5" />
           </Link>
 
           <div className="min-w-0 flex-1">
@@ -333,11 +333,7 @@ export function DocumentEditor({ documentId, user }: Props) {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <ProfileMenu
-              user={user}
-              avatarClassName="size-8"
-              fallbackClassName="text-xs"
-            />
+            <ProfileMenu user={user} />
           </div>
         </div>
 

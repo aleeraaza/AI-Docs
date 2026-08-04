@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { markdownToHtml, plainTextToHtml } from "@/lib/documents";
+import { markdownToHtml, plainTextToHtml } from "@/lib/html-content";
 
 describe("plainTextToHtml", () => {
   it("escapes HTML and preserves paragraphs", () => {

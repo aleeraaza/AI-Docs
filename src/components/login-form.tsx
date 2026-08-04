@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const DEMO_USERS = [
-  { email: "ali@alidocs.dev", label: "Ali Raza — owns sample doc" },
-  { email: "bob@alidocs.dev", label: "Bob — shared access" },
-  { email: "carol@alidocs.dev", label: "Carol — clean account" },
+  { email: "ali@alidocs.dev", label: "Ali — owns resume (+ shared docs)" },
+  { email: "bob@alidocs.dev", label: "Bob — owns Welcome (+ shared resume)" },
+  { email: "carol@alidocs.dev", label: "Carol — owns How-to guide" },
 ];
 
 export function LoginForm() {

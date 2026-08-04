@@ -2,6 +2,14 @@ import { redirect } from "next/navigation";
 import { DashboardClient } from "@/components/dashboard-client";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { stripHtml } from "@/lib/format";
+
+export const dynamic = "force-dynamic";
+
+function previewContent(html: string) {
+  const text = stripHtml(html);
+  return text.length > 600 ? `${text.slice(0, 600)}…` : text;
+}
 
 export default async function DashboardPage() {
   const user = await getSessionUser();
@@ -35,7 +43,7 @@ export default async function DashboardPage() {
       owned={owned.map((doc) => ({
         id: doc.id,
         title: doc.title,
-        content: doc.content,
+        content: previewContent(doc.content),
         updatedAt: doc.updatedAt.toISOString(),
         owner: doc.owner,
         shareCount: doc._count.shares,
@@ -44,7 +52,7 @@ export default async function DashboardPage() {
       shared={shared.map((doc) => ({
         id: doc.id,
         title: doc.title,
-        content: doc.content,
+        content: previewContent(doc.content),
         updatedAt: doc.updatedAt.toISOString(),
         owner: doc.owner,
         permission: doc.shares[0]?.permission ?? "edit",

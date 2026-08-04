@@ -63,18 +63,18 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    if (
-      typeof payload.sub !== "string" ||
-      typeof payload.email !== "string" ||
-      typeof payload.name !== "string"
-    ) {
+    if (typeof payload.sub !== "string") {
       return null;
     }
-    return {
-      id: payload.sub,
-      email: payload.email,
-      name: payload.name,
-    };
+
+    // Resolve against the DB so deleted/re-seeded users don't keep a stale session id
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, email: true, name: true },
+    });
+    if (!user) return null;
+
+    return user;
   } catch {
     return null;
   }

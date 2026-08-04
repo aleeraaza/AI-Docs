@@ -46,7 +46,7 @@ export function ProfileMenu({
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         type="button"
-        className="inline-flex items-center justify-center rounded-full outline-none hover:bg-[#f1f3f4] focus-visible:ring-2 focus-visible:ring-docs-blue/40"
+        className="inline-flex items-center justify-center rounded-full outline-none hover:bg-[#f1f3f4] focus-visible:ring-2 focus-visible:ring-docs-blue/40 cursor-pointer"
         aria-label="Account menu"
       >
         <Avatar className={cn("size-9", avatarClassName)}>
