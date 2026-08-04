@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ali Docs
 
-## Getting Started
+Collaborative documents by **Ali Raza** — a Google Docs–inspired editor built with Next.js.
 
-First, run the development server:
+## Demo accounts
+
+| Email | Password | Notes |
+|---|---|---|
+| `ali@alidocs.dev` | `password123` | Ali Raza — owns the sample Welcome doc |
+| `bob@alidocs.dev` | `password123` | Shared access to Ali’s sample doc |
+| `carol@alidocs.dev` | `password123` | Clean slate for create/share tests |
+
+## Local setup
+
+### Prerequisites
+
+- Node.js 20+ (tested on 22)
+- npm 10+
+
+### Install & run
 
 ```bash
+npm install
+cp .env.example .env
+npm run db:setup
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Useful scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Script | Purpose |
+|---|---|
+| `npm run dev` | Next.js dev server (Turbopack) |
+| `npm run build` | Production build |
+| `npm start` | Run production server |
+| `npm test` | Vitest unit tests |
+| `npm run db:setup` | Push schema + seed users |
+| `npm run db:seed` | Re-seed users / sample doc |
 
-## Learn More
+## Supported file uploads
 
-To learn more about Next.js, take a look at the following resources:
+- `.txt` → paragraphs preserved as HTML
+- `.md` / `.markdown` → basic headings, bold/italic, lists converted to HTML
+- `.docx` → converted to HTML via Mammoth (max 2MB)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Next.js 16** (App Router) + React 19 + TypeScript
+- **Prisma 6** + **SQLite**
+- **TipTap** rich-text editor
+- **jose** + **bcryptjs** for sessions / passwords
+- **Zod** request validation
+- **Vitest** for unit tests
 
-## Deploy on Vercel
+## Deployment notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+SQLite is ideal for local review. For a hosted demo (Vercel / similar serverless):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Switch `DATABASE_URL` to a free Postgres (e.g. Neon) and set `provider = "postgresql"` in `prisma/schema.prisma`
+2. Set `AUTH_SECRET` to a long random string
+3. Run `npx prisma db push && npm run db:seed` against the remote DB
+4. Deploy with `npm run build`
+
+Alternatively keep SQLite on a long-running host (Railway / Render / Fly) with a persistent volume.
+
+## Project docs
+
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — prioritization & design choices
+- [`AI_WORKFLOW.md`](./AI_WORKFLOW.md) — how AI was used on this exercise
+- [`SUBMISSION.md`](./SUBMISSION.md) — deliverables checklist
+- [`WALKTHROUGH_URL.txt`](./WALKTHROUGH_URL.txt) — walkthrough video link (add after recording)
+
+## Intentionally deprioritized
+
+- Real-time multiplayer cursors / CRDT sync
+- Comments / suggestions
+- Version history
+- PDF / DOCX export
+- Enterprise SSO / fine-grained ACLs beyond owner + view/edit share
+
+With another 2–4 hours: live presence indicators, Markdown export, and Postgres-backed Vercel deploy polish.
